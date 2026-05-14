@@ -1,0 +1,2021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WAC Auction OS — Synced · v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0907;
+    --surface: #15120D;
+    --surface-2: #1F1B14;
+    --surface-3: #2A2419;
+    --border: #2D2820;
+    --border-strong: #463E30;
+    --ink: #EFE9DD;
+    --ink-muted: #9C9285;
+    --ink-faint: #6A6357;
+    --brass: #C4915C;
+    --brass-bright: #E0AA70;
+    --brass-dim: #8A6740;
+    --pre: #C4915C;
+    --during: #C2515A;
+    --post: #7A8C6C;
+    --intake: #5B7B8F;
+    --albus: #C4915C;
+    --storage: #7A8C6C;
+    --validation: #B58F5A;
+    --decision: #C2515A;
+    --content: #6B8E9A;
+    --ready: #D4C49A;
+    --placeholder: #5A5048;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --sans: 'Geist', system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--sans);
+    -webkit-font-smoothing: antialiased; overscroll-behavior: none; touch-action: none;
+  }
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    background: rgba(10, 9, 7, 0.7);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; font-family: var(--serif); font-size: 18px; }
+  .mark {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--brass);
+    box-shadow: 0 0 0 1px var(--brass-dim), 0 0 16px rgba(196, 145, 92, 0.4);
+    transform: translateY(2px);
+  }
+  .ver {
+    font-family: var(--mono); font-size: 10px; color: var(--brass);
+    text-transform: uppercase; letter-spacing: 0.12em; margin-left: 4px;
+  }
+  .toolbar { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  .tool-btn {
+    background: var(--surface); border: 1px solid var(--border); color: var(--ink-muted);
+    padding: 6px 11px; border-radius: 4px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s ease; white-space: nowrap;
+  }
+  .tool-btn:hover { background: var(--surface-2); color: var(--ink); border-color: var(--border-strong); }
+  .tool-btn.active { background: var(--brass); color: var(--bg); border-color: var(--brass); }
+  .tool-btn.phase-pre.active { background: var(--pre); color: var(--bg); border-color: var(--pre); }
+  .tool-btn.phase-during.active { background: var(--during); color: var(--ink); border-color: var(--during); }
+  .tool-btn.phase-post.active { background: var(--post); color: var(--bg); border-color: var(--post); }
+  .toolbar-divider { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+  .play-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--brass-bright);
+    width: 28px; height: 28px; border-radius: 50%;
+    cursor: pointer; transition: all 0.15s ease;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+  .play-btn:hover { background: var(--surface-2); border-color: var(--brass-dim); }
+  .play-btn.playing { background: var(--brass); color: var(--bg); border-color: var(--brass); }
+  .speed-group { display: flex; gap: 0; }
+  .speed-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--ink-faint); padding: 6px 8px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.04em;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .speed-btn:first-child { border-radius: 4px 0 0 4px; }
+  .speed-btn:last-child { border-radius: 0 4px 4px 0; border-left: none; }
+  .speed-btn:not(:first-child):not(:last-child) { border-left: none; }
+  .speed-btn:hover { color: var(--ink); background: var(--surface-2); }
+  .speed-btn.active { background: var(--brass); color: var(--bg); border-color: var(--brass); }
+  @media (max-width: 720px) {
+    .topbar { padding: 10px 14px; flex-wrap: wrap; }
+    .brand { font-size: 14px; }
+    .toolbar { gap: 3px; }
+    .tool-btn { padding: 5px 8px; font-size: 9px; }
+  }
+  #canvas-container {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background:
+      radial-gradient(ellipse 30% 80% at 16% 50%, rgba(196, 145, 92, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 80% at 50% 50%, rgba(194, 81, 90, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 80% at 84% 50%, rgba(122, 140, 108, 0.06) 0%, transparent 60%),
+      var(--bg);
+  }
+  canvas { display: block; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+  .label-3d {
+    pointer-events: none; user-select: none;
+    font-family: var(--sans); text-align: center; color: var(--ink);
+    transition: opacity 0.25s ease;
+    white-space: nowrap;
+  }
+  .label-3d .order-tag {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em;
+    color: var(--ink-faint); margin-bottom: 2px;
+    text-shadow: 0 0 8px var(--bg);
+  }
+  .label-3d .name {
+    font-family: var(--serif); font-size: 14px; line-height: 1.1; color: var(--ink);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.7);
+  }
+  .label-3d.hub .order-tag { color: var(--brass); font-size: 11px; }
+  .label-3d.hub .name { font-size: 32px; color: var(--brass-bright); letter-spacing: -0.005em; }
+  .label-3d.placeholder .name { color: var(--ink-muted); font-style: italic; }
+  .label-3d .status-pip {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ink-faint); margin-right: 6px; transform: translateY(-2px);
+    box-shadow: 0 0 4px currentColor;
+  }
+  .label-3d .status-pip.in-progress { background: var(--brass-bright); color: var(--brass-bright); }
+  .label-3d .status-pip.done { background: var(--storage); color: var(--storage); }
+  .label-3d.is-albus .name { color: var(--brass-bright); }
+  .label-3d.dimmed { opacity: 0.18; }
+  .label-3d.sub .name {
+    font-family: var(--sans); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.02em; color: var(--ink-muted);
+  }
+  .label-phase-tag {
+    pointer-events: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--brass);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6);
+    text-align: center;
+  }
+  .label-phase-tag .progress {
+    font-family: var(--mono); font-size: 9px; color: var(--ink-muted);
+    margin-top: 4px; letter-spacing: 0.1em;
+  }
+  .panel {
+    position: fixed; top: 60px; right: 0; bottom: 0; width: 440px; max-width: 100%;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+    border-left: 1px solid var(--border); z-index: 25;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto; overflow-x: hidden;
+  }
+  .panel.open { transform: translateX(0); }
+  .panel-header {
+    padding: 28px 28px 0; position: sticky; top: 0;
+    background: linear-gradient(180deg, var(--surface) 80%, transparent 100%);
+    backdrop-filter: blur(8px); z-index: 2;
+  }
+  .panel-close {
+    position: absolute; top: 22px; right: 22px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--ink-muted); width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .panel-close:hover { background: var(--surface-3); color: var(--ink); }
+  .panel-eyebrow {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--brass);
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .category-pip { display: inline-block; width: 8px; height: 8px; border-radius: 2px; }
+  .panel-title { font-family: var(--serif); font-size: 32px; line-height: 1.1; margin-bottom: 12px; }
+  .panel-title.hub { font-size: 44px; color: var(--brass-bright); }
+  .panel-tagline { font-size: 15px; color: var(--ink-muted); line-height: 1.5; margin-bottom: 20px; }
+  .panel-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .badge-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 3px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .badge-tag.albus {
+    background: rgba(196, 145, 92, 0.12); border: 1px solid var(--brass-dim); color: var(--brass-bright);
+  }
+  .badge-tag.albus::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--brass-bright); box-shadow: 0 0 8px var(--brass-bright);
+  }
+  .badge-tag.placeholder {
+    background: rgba(154, 144, 132, 0.08); border: 1px dashed var(--ink-faint); color: var(--ink-muted);
+  }
+  .panel-body { padding: 20px 28px 40px; }
+  .panel-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .panel-section:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  .panel-section h4 {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px; font-weight: 500;
+  }
+  .panel-section p { font-size: 15px; color: var(--ink); line-height: 1.6; }
+  .panel-section code {
+    font-family: var(--mono); font-size: 12px;
+    background: var(--surface-2); padding: 1px 6px; border-radius: 3px; color: var(--brass);
+  }
+  .sub-list { display: grid; gap: 8px; }
+  .sub-item {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 12px 14px;
+  }
+  .sub-item .name { font-family: var(--serif); font-size: 16px; margin-bottom: 4px; }
+  .sub-item .desc { font-size: 13px; color: var(--ink-muted); line-height: 1.5; }
+  .branch-list { display: grid; gap: 6px; }
+  .branch-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 10px 14px;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .branch-item:hover { background: var(--surface-3); border-color: var(--brass-dim); }
+  .branch-num { font-family: var(--mono); font-size: 10px; color: var(--brass); min-width: 22px; }
+  .branch-name { font-family: var(--serif); font-size: 16px; flex: 1; }
+  .branch-arrow { color: var(--ink-faint); font-family: var(--mono); }
+  .conn-list { display: grid; gap: 6px; }
+  .conn-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; color: var(--ink-muted);
+    cursor: pointer; padding: 8px 12px; border-radius: 3px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    transition: all 0.15s ease;
+  }
+  .conn-item:hover { background: var(--surface-3); color: var(--ink); border-color: var(--brass-dim); }
+  .conn-item .arrow { color: var(--brass); font-family: var(--mono); }
+  .status-toggle {
+    display: flex; gap: 4px;
+    background: var(--surface-2); padding: 4px;
+    border-radius: 4px; border: 1px solid var(--border);
+  }
+  .status-btn {
+    flex: 1; background: transparent; border: none; color: var(--ink-faint);
+    padding: 8px 10px; border-radius: 3px; cursor: pointer;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    transition: all 0.15s ease;
+  }
+  .status-btn:hover { color: var(--ink-muted); }
+  .status-btn.active.planned { background: var(--surface-3); color: var(--ink-muted); }
+  .status-btn.active.in-progress { background: rgba(224, 170, 112, 0.15); color: var(--brass-bright); }
+  .status-btn.active.done { background: rgba(122, 140, 108, 0.15); color: var(--storage); }
+  .notes-box {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.55;
+    padding: 14px; border-radius: 4px; resize: vertical; min-height: 100px;
+    transition: border-color 0.15s ease;
+  }
+  .notes-box:focus { outline: none; border-color: var(--brass-dim); }
+  .notes-meta {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-faint);
+    margin-top: 6px; letter-spacing: 0.05em;
+  }
+  @media (max-width: 720px) {
+    .panel {
+      width: 100%; top: auto; height: 72vh; bottom: 0;
+      border-left: none; border-top: 1px solid var(--border);
+      transform: translateY(100%); border-radius: 16px 16px 0 0;
+    }
+    .panel.open { transform: translateY(0); }
+    .panel-title { font-size: 26px; }
+    .panel-title.hub { font-size: 36px; }
+  }
+  .hint {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(21, 18, 13, 0.85); backdrop-filter: blur(8px);
+    border: 1px solid var(--border); border-radius: 100px; padding: 8px 18px;
+    font-family: var(--mono); font-size: 11px; color: var(--ink-muted);
+    letter-spacing: 0.05em; z-index: 20;
+    display: flex; gap: 14px; align-items: center;
+    transition: opacity 0.4s ease;
+  }
+  .hint.fade { opacity: 0; pointer-events: none; }
+  .hint .key {
+    background: var(--surface-3); border: 1px solid var(--border-strong);
+    border-radius: 3px; padding: 1px 6px; color: var(--ink); font-size: 10px;
+  }
+  @media (max-width: 720px) {
+    .hint { font-size: 10px; padding: 7px 14px; gap: 10px; }
+    .hint .desktop-only { display: none; }
+  }
+  .loader {
+    position: fixed; inset: 0; background: var(--bg); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+    transition: opacity 0.5s ease;
+  }
+  .loader.hidden { opacity: 0; pointer-events: none; }
+  .loader-text {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--brass);
+  }
+  .loader-spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--surface-2); border-top-color: var(--brass);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .phase-meters {
+    position: fixed; left: 16px; bottom: 16px;
+    background: rgba(21, 18, 13, 0.85); backdrop-filter: blur(8px);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px 14px; z-index: 20;
+    display: flex; flex-direction: column; gap: 10px; min-width: 200px;
+  }
+  .phase-meter-title {
+    font-family: var(--mono); font-size: 9px; color: var(--brass);
+    letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 2px;
+  }
+  .phase-meter-row { display: flex; flex-direction: column; gap: 4px; }
+  .phase-meter-label {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 10px; color: var(--ink-muted);
+    letter-spacing: 0.05em;
+  }
+  .phase-meter-label .phase-name { color: var(--ink); }
+  .phase-meter-bar { height: 3px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
+  .phase-meter-fill { height: 100%; transition: width 0.4s ease; }
+  .phase-meter-fill.pre { background: linear-gradient(90deg, var(--storage), var(--pre)); }
+  .phase-meter-fill.during { background: linear-gradient(90deg, var(--storage), var(--during)); }
+  .phase-meter-fill.post { background: linear-gradient(90deg, var(--storage), var(--post)); }
+  @media (max-width: 720px) { .phase-meters { display: none; } }
+
+  /* ========== Navigation strip — inside panel + floating ========== */
+  .nav-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .nav-arrow {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s ease;
+  }
+  .nav-arrow:hover:not(:disabled) {
+    background: var(--brass);
+    color: var(--bg);
+    border-color: var(--brass);
+  }
+  .nav-arrow:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .nav-position {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    flex: 1;
+  }
+  .nav-position .current {
+    color: var(--brass);
+    font-weight: 600;
+  }
+
+  /* Floating nav (visible regardless of panel state, when a block is selected) */
+  .floating-nav {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(21, 18, 13, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-strong);
+    border-radius: 100px;
+    padding: 6px 10px;
+    z-index: 22;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .floating-nav.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+  .floating-nav .nav-arrow { width: 32px; height: 32px; }
+  .floating-nav .nav-position { padding: 0 8px; min-width: 130px; font-size: 10px; }
+
+  @media (max-width: 720px) {
+    .floating-nav { display: none; }
+  }
+
+  /* ========== Sync UI ========== */
+  .sync-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--ink-faint);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .sync-status:hover { background: var(--surface-2); color: var(--ink-muted); }
+  .sync-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ink-faint);
+    transition: background-color 0.2s ease;
+  }
+  .sync-status.connected .sync-dot { background: var(--storage); box-shadow: 0 0 6px var(--storage); }
+  .sync-status.connected { color: var(--storage); }
+  .sync-status.syncing .sync-dot { background: var(--brass-bright); box-shadow: 0 0 6px var(--brass-bright); animation: pulse 1.2s ease-in-out infinite; }
+  .sync-status.error .sync-dot { background: var(--during); box-shadow: 0 0 6px var(--during); }
+  .sync-status.error { color: var(--during); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(10, 9, 7, 0.75);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    width: 480px; max-width: 90%;
+    padding: 28px;
+    transform: scale(0.96);
+    transition: transform 0.2s ease;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal-title {
+    font-family: var(--serif); font-size: 24px; margin-bottom: 6px;
+  }
+  .modal-sub {
+    font-size: 13px; color: var(--ink-muted); margin-bottom: 20px; line-height: 1.5;
+  }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label {
+    display: block; font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 6px;
+  }
+  .modal-field input {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--ink); font-family: var(--mono); font-size: 12px;
+    padding: 10px 12px; border-radius: 4px;
+    transition: border-color 0.15s ease;
+  }
+  .modal-field input:focus { outline: none; border-color: var(--brass-dim); }
+  .modal-actions {
+    display: flex; gap: 8px; margin-top: 20px;
+    justify-content: flex-end; flex-wrap: wrap;
+  }
+  .modal-btn {
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--ink); padding: 8px 14px; border-radius: 4px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .modal-btn:hover { background: var(--surface-3); border-color: var(--brass-dim); }
+  .modal-btn.primary { background: var(--brass); color: var(--bg); border-color: var(--brass); }
+  .modal-btn.primary:hover { background: var(--brass-bright); }
+  .modal-btn.danger { color: var(--during); }
+  .modal-msg {
+    font-family: var(--mono); font-size: 11px; margin-top: 12px;
+    padding: 10px; border-radius: 4px; display: none;
+  }
+  .modal-msg.success { display: block; background: rgba(122, 140, 108, 0.12); color: var(--storage); border: 1px solid rgba(122, 140, 108, 0.3); }
+  .modal-msg.error { display: block; background: rgba(194, 81, 90, 0.12); color: var(--during); border: 1px solid rgba(194, 81, 90, 0.3); }
+  .modal-msg.info { display: block; background: var(--surface-2); color: var(--ink-muted); border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">Building the operating system…</div>
+</div>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="mark"></span>
+    WAC Auction OS
+    <span class="ver">v1.0 · Synced</span>
+  </div>
+  <div class="toolbar">
+    <button class="play-btn playing" id="play-pause" title="Play/Pause">⏸</button>
+    <div class="speed-group">
+      <button class="speed-btn" data-speed="0.5">·5x</button>
+      <button class="speed-btn active" data-speed="1">1x</button>
+      <button class="speed-btn" data-speed="2">2x</button>
+      <button class="speed-btn" data-speed="4">4x</button>
+    </div>
+    <span class="toolbar-divider"></span>
+    <button class="tool-btn active" id="filter-all">All</button>
+    <button class="tool-btn phase-pre" id="filter-pre">Pre</button>
+    <button class="tool-btn phase-during" id="filter-during">During</button>
+    <button class="tool-btn phase-post" id="filter-post">Post</button>
+    <span class="toolbar-divider"></span>
+    <button class="tool-btn" id="reset-view">Overview</button>
+    <button class="tool-btn" id="auto-rotate">Orbit</button>
+    <span class="toolbar-divider"></span>
+    <button class="sync-status" id="sync-status" title="Sync settings">
+      <span class="sync-dot"></span>
+      <span id="sync-text">Local only</span>
+    </button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sync-modal">
+  <div class="modal">
+    <div class="modal-title">Sync settings</div>
+    <div class="modal-sub">Connect this map to your Apps Script bridge so your ticks and notes flow into the <code>build_state</code> tab. Albus reads from there.</div>
+    <div class="modal-field">
+      <label>Apps Script Web App URL</label>
+      <input type="text" id="sync-url-input" placeholder="https://script.google.com/macros/s/.../exec" />
+    </div>
+    <div class="modal-field">
+      <label>Secret token</label>
+      <input type="password" id="sync-token-input" placeholder="The SECRET from apps_script.gs" />
+    </div>
+    <div class="modal-msg" id="sync-msg"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="sync-close">Close</button>
+      <button class="modal-btn danger" id="sync-disconnect" style="display:none">Disconnect</button>
+      <button class="modal-btn" id="sync-export">Export JSON</button>
+      <button class="modal-btn" id="sync-test">Test</button>
+      <button class="modal-btn primary" id="sync-save">Save & sync</button>
+    </div>
+  </div>
+
+<div id="canvas-container"></div>
+
+<div class="phase-meters">
+  <div class="phase-meter-title">Tick all the boxes</div>
+  <div class="phase-meter-row">
+    <div class="phase-meter-label"><span class="phase-name">Pre Auction</span><span id="meter-pre-text">— / —</span></div>
+    <div class="phase-meter-bar"><div class="phase-meter-fill pre" id="meter-pre-fill"></div></div>
+  </div>
+  <div class="phase-meter-row">
+    <div class="phase-meter-label"><span class="phase-name">During Auction</span><span id="meter-during-text">— / —</span></div>
+    <div class="phase-meter-bar"><div class="phase-meter-fill during" id="meter-during-fill"></div></div>
+  </div>
+  <div class="phase-meter-row">
+    <div class="phase-meter-label"><span class="phase-name">Post Auction</span><span id="meter-post-text">— / —</span></div>
+    <div class="phase-meter-bar"><div class="phase-meter-fill post" id="meter-post-fill"></div></div>
+  </div>
+</div>
+
+<div class="hint" id="hint">
+  <span><span class="key">Drag</span> rotate</span>
+  <span class="desktop-only"><span class="key">Scroll</span> zoom</span>
+  <span class="desktop-only"><span class="key">←</span> <span class="key">→</span> walk through</span>
+  <span><span class="key">Tap</span> a step</span>
+</div>
+
+<div class="floating-nav" id="floating-nav">
+  <button class="nav-arrow" id="float-prev">←</button>
+  <div class="nav-position" id="float-nav-position">—</div>
+  <button class="nav-arrow" id="float-next">→</button>
+</div>
+
+<aside class="panel" id="panel">
+  <div class="panel-header">
+    <button class="panel-close" id="panel-close">×</button>
+    <div class="panel-eyebrow"><span class="category-pip" id="panel-pip"></span><span id="panel-layer">PHASE</span></div>
+    <h2 class="panel-title" id="panel-title">Block name</h2>
+    <p class="panel-tagline" id="panel-tagline">One-line summary</p>
+    <div class="panel-badges" id="panel-badges"></div>
+    <div class="nav-strip" id="panel-nav-strip" style="display:none">
+      <button class="nav-arrow" id="panel-prev" title="Previous (← arrow)">←</button>
+      <div class="nav-position" id="panel-nav-position">— of —</div>
+      <button class="nav-arrow" id="panel-next" title="Next (→ arrow)">→</button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="panel-section">
+      <h4>What happens here</h4>
+      <p id="panel-detail"></p>
+    </div>
+    <div class="panel-section" id="panel-branches-section" style="display:none">
+      <h4>Steps in this phase</h4>
+      <div class="branch-list" id="panel-branches-list"></div>
+    </div>
+    <div class="panel-section" id="panel-sub-section">
+      <h4>Sub-steps</h4>
+      <div class="sub-list" id="panel-sub-list"></div>
+    </div>
+    <div class="panel-section" id="panel-connects-section">
+      <h4>Next step</h4>
+      <div class="conn-list" id="panel-connects-list"></div>
+    </div>
+    <div class="panel-section">
+      <h4>How's this going</h4>
+      <div class="status-toggle">
+        <button class="status-btn planned" data-status="planned">Planned</button>
+        <button class="status-btn in-progress" data-status="in-progress">In progress</button>
+        <button class="status-btn done" data-status="done">Built</button>
+      </div>
+    </div>
+    <div class="panel-section">
+      <h4>Your notes</h4>
+      <textarea class="notes-box" id="panel-notes" placeholder="Jot down anything you want to remember about this step…"></textarea>
+      <div class="notes-meta" id="panel-notes-meta">Saved on this device · last edit —</div>
+    </div>
+  </div>
+</aside>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+const CATS = {
+  intake: { color: 0x5B7B8F, css: '--intake' },
+  albus: { color: 0xC4915C, css: '--albus' },
+  storage: { color: 0x7A8C6C, css: '--storage' },
+  validation: { color: 0xB58F5A, css: '--validation' },
+  decision: { color: 0xC2515A, css: '--decision' },
+  content: { color: 0x6B8E9A, css: '--content' },
+  ready: { color: 0xD4C49A, css: '--ready' },
+  pre: { color: 0xC4915C, css: '--pre' },
+  during: { color: 0xC2515A, css: '--during' },
+  post: { color: 0x7A8C6C, css: '--post' },
+  placeholder: { color: 0x5A5048, css: '--placeholder' }
+};
+
+const PHASE_COLOR_HEX = { pre: 0xC4915C, during: 0xC2515A, post: 0x7A8C6C };
+
+const BLOCKS = [
+  { id: 'hub-pre', title: 'Pre Auction', phase: 'pre', isHub: true, category: 'pre',
+    tagline: 'Everything from a consignor\'s first message to a lot ready for sale.',
+    detail: 'Consignors send their items, Albus reads the messages, we make sure all the info and photos are good, you approve, we make the social posts. The Sheet holds the data. Drive holds the photos. Albus on WhatsApp or Telegram is the only way you approve things.',
+    branches: ['intake','parse','lot-create','validate','triage','qc','approve','meta-gate','content','ready'] },
+  { id: 'hub-during', title: 'During Auction', phase: 'during', isHub: true, category: 'during', placeholder: true,
+    tagline: 'The sale itself: catalogue, bidders, the hammer falling.',
+    detail: 'Ready lots get picked for a specific sale. The catalogue goes public. Bidders register. The auction happens — in the room, online, or both. Each lot is hammered sold or passed. Every bid is logged. This phase is a placeholder for now — we\'ll detail it once Pre Auction is solid.',
+    branches: ['sale-setup','catalogue-pub','bidder-reg','live-floor','hammer','sale-log'] },
+  { id: 'hub-post', title: 'Post Auction', phase: 'post', isHub: true, category: 'post', placeholder: true,
+    tagline: 'After the gavel: invoice, payment, handover, payout, archive.',
+    detail: 'Once the sale ends, buyers get invoiced. They pay. Lots are handed over or shipped. Consignors get paid. The whole sale is summarized and archived. Placeholder for now.',
+    branches: ['invoicing','payment','release','shipping','payout','reporting'] },
+
+  { id: 'intake', title: 'Intake', phase: 'pre', phaseOrder: 0, category: 'intake',
+    tagline: 'A consignor sends a lot on WhatsApp or Telegram.',
+    detail: 'Albus is always listening on WhatsApp and Telegram. Anything a consignor sends — photos, voice notes, text — gets treated as a possible lot. If someone walks in with a piece, the catalog team enters it manually.',
+    subBlocks: [
+      { name: 'WhatsApp', desc: 'Consignors send messages and photos here.' },
+      { name: 'Telegram', desc: 'Same thing on Telegram.' },
+      { name: 'Manual entry', desc: 'For walk-in consignments.' }
+    ],
+    nextId: 'parse' },
+  { id: 'parse', title: 'Albus Reads It', phase: 'pre', phaseOrder: 1, category: 'albus', albusGate: true,
+    tagline: 'Albus reads what came in and pulls out the basics.',
+    detail: 'Albus reads the message and tries to figure out what it is, who made it, how big it is, what it\'s made of. Photos and videos get saved. Albus also notes how confident it is in what it pulled, so we know whether to double-check.',
+    subBlocks: [
+      { name: 'Read the message', desc: 'Save the raw text.' },
+      { name: 'Pull out the info', desc: 'Title, artist, size, medium.' },
+      { name: 'Save the photos', desc: 'Download to a staging folder on Drive.' },
+      { name: 'Confidence score', desc: 'How sure Albus is about what it pulled.' }
+    ],
+    nextId: 'lot-create' },
+  { id: 'lot-create', title: 'Make the Lot', phase: 'pre', phaseOrder: 2, category: 'storage',
+    tagline: 'Give the lot a unique number, a Drive folder, and a row in the sheet.',
+    detail: 'Every lot gets a unique ID like WAC-2026-0042. The year is the year it came in — never changes. A Drive folder is made for the photos. A new row goes in the sheet. The photos move from staging into the new folder.',
+    subBlocks: [
+      { name: 'Unique ID', desc: 'WAC-{year}-{number}, never reused.' },
+      { name: 'Drive folder', desc: 'A home for the photos.' },
+      { name: 'Sheet row', desc: 'New entry in the lots tab.' },
+      { name: 'Photos linked', desc: 'Files moved and tagged.' }
+    ],
+    nextId: 'validate' },
+  { id: 'validate', title: 'Check It', phase: 'pre', phaseOrder: 3, category: 'validation',
+    tagline: 'Make sure nothing\'s missing and the photos match the lot.',
+    detail: 'Make sure each lot has at least a title and one photo. Make sure photo file names match the lot ID. Make sure artist and medium names are spelled the way we usually do. Flag low-resolution photos. Flag possible duplicates. If something\'s wrong, the lot can\'t move forward.',
+    subBlocks: [
+      { name: 'Photos match lot ID', desc: 'File names line up with the lot.' },
+      { name: 'Has the basics', desc: 'Title and at least one photo.' },
+      { name: 'Names spelled right', desc: 'Match against our standard list.' },
+      { name: 'Photo quality', desc: 'Hero photo big enough to use.' },
+      { name: 'Not a duplicate', desc: 'Check it\'s not already in the system.' }
+    ],
+    nextId: 'triage' },
+  { id: 'triage', title: 'Fix Problems', phase: 'pre', phaseOrder: 4, category: 'albus', albusGate: true,
+    tagline: 'If something\'s wrong, get it fixed by the right person.',
+    detail: 'Some problems the consignor needs to fix — like a missing measurement or a blurry photo. Albus DMs them to ask. Other problems are internal — like a mislabeled file name. Those go to the catalog team. Once fixed, we check again.',
+    subBlocks: [
+      { name: 'Ping the consignor', desc: 'Albus DMs to ask for fixes.' },
+      { name: 'Catalog team queue', desc: 'Internal fixes for the team.' },
+      { name: 'Re-check', desc: 'Once fixed, validation runs again.' }
+    ],
+    nextId: 'qc' },
+  { id: 'qc', title: 'Final Polish', phase: 'pre', phaseOrder: 5, category: 'validation',
+    tagline: 'Cataloguer fills in any gaps. Reviewer makes sure it\'s clean for you.',
+    detail: 'The cataloguer adds anything missing — provenance, condition notes, refined estimates. Then a reviewer checks the whole thing makes sense. The reviewer can\'t approve, only prepare. You\'re the only one who approves.',
+    subBlocks: [
+      { name: 'Cataloguer enriches', desc: 'Adds provenance, condition, estimates.' },
+      { name: 'Reviewer sanity-checks', desc: 'Does this all make sense?' },
+      { name: 'Ready for your eyes', desc: 'Lot prepared for approval.' }
+    ],
+    nextId: 'approve' },
+  { id: 'approve', title: 'You Approve', phase: 'pre', phaseOrder: 6, category: 'decision', albusGate: true,
+    tagline: 'Albus pings you on WhatsApp or Telegram. You approve or reject.',
+    detail: 'There\'s no approve button on the website. None. The only way a lot moves forward is Albus messaging you with the lot details and photos. You reply yes or no. If no, the lot is frozen and the consignor is told. If yes, it moves on.',
+    subBlocks: [
+      { name: 'Albus messages you', desc: 'Lot summary + photos.' },
+      { name: 'Approve', desc: 'Lot moves toward content.' },
+      { name: 'Reject', desc: 'Lot frozen, consignor notified.' },
+      { name: 'Decision logged', desc: 'Every yes and no is recorded.' }
+    ],
+    nextId: 'meta-gate' },
+  { id: 'meta-gate', title: 'Meta or Just IG?', phase: 'pre', phaseOrder: 7, category: 'decision', albusGate: true,
+    tagline: 'Albus asks: run this on Meta ads, just Instagram, or skip both?',
+    detail: 'Some lots aren\'t a fit for Meta ads — Meta has rules about what they\'ll allow. So Albus asks you per lot: yes for Meta and IG, IG-only, or skip both. Instagram organic always works unless you say otherwise.',
+    subBlocks: [
+      { name: 'Albus asks', desc: 'Three-option message: yes / IG-only / skip.' },
+      { name: 'Yes path', desc: 'Both Meta ad and IG post are made.' },
+      { name: 'IG-only path', desc: 'Only the Instagram post.' },
+      { name: 'Skip path', desc: 'No social content. Manual posting only.' }
+    ],
+    nextId: 'content' },
+  { id: 'content', title: 'Make the Posts', phase: 'pre', phaseOrder: 8, category: 'content',
+    tagline: 'Make the Instagram post. Make the Meta ad too if you said yes.',
+    detail: 'Instagram gets a carousel of up to 10 photos with a long caption and hashtags. Meta ads get square and 4:5 crops, short copy, a button, and a target audience based on what kind of lot it is and how much it\'s worth.',
+    subBlocks: [
+      { name: 'Instagram post', desc: 'Carousel + caption + hashtags. Always.' },
+      { name: 'Meta ad', desc: 'Cropped photos + ad copy + audience. If approved.' },
+      { name: 'Ready in the studio', desc: 'Both surfaced for posting.' }
+    ],
+    nextId: 'ready' },
+  { id: 'ready', title: 'Ready', phase: 'pre', phaseOrder: 9, category: 'ready',
+    tagline: 'Lot is good to go. Waiting for a sale.',
+    detail: 'The lot has its ID, photos, info, and posts. It\'s parked here until we decide which sale it goes into. Assigning to a sale is the next phase, During Auction.',
+    subBlocks: [
+      { name: 'Status: ready', desc: 'Fully prepared.' },
+      { name: 'Awaiting sale', desc: 'Will be picked when a sale is set up.' }
+    ],
+    nextId: 'sale-setup' },
+
+  { id: 'sale-setup', title: 'Set Up the Sale', phase: 'during', phaseOrder: 0, category: 'placeholder', placeholder: true,
+    tagline: 'Pick which lots go in this sale. Set the order. Lock the reserves.',
+    detail: 'TO BE DEFINED. Ready lots get picked for the sale. They\'re put in a running order. Reserves are confirmed with consignors one last time.',
+    subBlocks: [
+      { name: 'Pick the lots', desc: 'Which ready lots go in.' },
+      { name: 'Running order', desc: 'Sequence for the auction.' },
+      { name: 'Confirm reserves', desc: 'Last check with consignors.' }
+    ],
+    nextId: 'catalogue-pub' },
+  { id: 'catalogue-pub', title: 'Publish Catalogue', phase: 'during', phaseOrder: 1, category: 'placeholder', placeholder: true,
+    tagline: 'Catalogue goes public. People can come look before the sale.',
+    detail: 'TO BE DEFINED. The lot list goes public — website, Instagram, Meta ads (for eligible lots). The pre-sale viewing window opens for people to come look.',
+    subBlocks: [
+      { name: 'Web catalogue', desc: 'Lots visible on the site.' },
+      { name: 'Social push', desc: 'Pre-made content goes live.' },
+      { name: 'Preview window', desc: 'In-person viewing opens.' }
+    ],
+    nextId: 'bidder-reg' },
+  { id: 'bidder-reg', title: 'Register Bidders', phase: 'during', phaseOrder: 2, category: 'placeholder', placeholder: true,
+    tagline: 'Bidders sign up, get a paddle, prove who they are.',
+    detail: 'TO BE DEFINED. Anyone who wants to bid signs up — in-room or online. Identity check. Each bidder gets a paddle number for the sale.',
+    subBlocks: [
+      { name: 'Sign-up form', desc: 'Bidder details and IDs.' },
+      { name: 'Identity check', desc: 'Verified, watchlist screened.' },
+      { name: 'Paddle assigned', desc: 'Number for the sale.' }
+    ],
+    nextId: 'live-floor' },
+  { id: 'live-floor', title: 'The Auction', phase: 'during', phaseOrder: 3, category: 'placeholder', placeholder: true,
+    tagline: 'The sale itself — in the room and online.',
+    detail: 'TO BE DEFINED. Auctioneer at the rostrum. Bidders raise paddles in the room. Online bidders click. Phone bidders are relayed by staff. Lots go in catalogue order.',
+    subBlocks: [
+      { name: 'In the room', desc: 'Paddles in the saleroom.' },
+      { name: 'Online', desc: 'Real-time bids from the website.' },
+      { name: 'Phone', desc: 'Staff relay phone bids to the auctioneer.' }
+    ],
+    nextId: 'hammer' },
+  { id: 'hammer', title: 'Hammer Falls', phase: 'during', phaseOrder: 4, category: 'placeholder', placeholder: true,
+    tagline: 'Sold or passed. Result locked in.',
+    detail: 'TO BE DEFINED. Each lot ends one of two ways. Sold — winner and price recorded. Passed — reserve wasn\'t met, lot goes back or relisted.',
+    subBlocks: [
+      { name: 'Sold', desc: 'Winner and price recorded.' },
+      { name: 'Passed', desc: 'Reserve not met.' },
+      { name: 'Outcome locked', desc: 'Recorded and immutable.' }
+    ],
+    nextId: 'sale-log' },
+  { id: 'sale-log', title: 'Log Everything', phase: 'during', phaseOrder: 5, category: 'placeholder', placeholder: true,
+    tagline: 'Record every bid as it happens.',
+    detail: 'TO BE DEFINED. Every bid — winning or not — is logged with paddle, time, and channel. This is the audit trail for the sale.',
+    subBlocks: [
+      { name: 'Bid stream', desc: 'All bids with paddle and timestamp.' },
+      { name: 'Outcome per lot', desc: 'Sold or passed.' },
+      { name: 'Sale ledger', desc: 'Master record.' }
+    ],
+    nextId: 'invoicing' },
+
+  { id: 'invoicing', title: 'Invoice the Buyers', phase: 'post', phaseOrder: 0, category: 'placeholder', placeholder: true,
+    tagline: 'Send each buyer their invoice.',
+    detail: 'TO BE DEFINED. For each sold lot, an invoice goes to the buyer. Hammer plus buyer\'s premium plus tax and any fees. Sent by email.',
+    subBlocks: [
+      { name: 'Build the invoice', desc: 'Hammer + premium + tax + fees.' },
+      { name: 'Send to buyer', desc: 'Email with terms.' },
+      { name: 'Set the deadline', desc: 'Window before late fees.' }
+    ],
+    nextId: 'payment' },
+  { id: 'payment', title: 'Collect Payment', phase: 'post', phaseOrder: 1, category: 'placeholder', placeholder: true,
+    tagline: 'Buyers pay. Reminders sent. Late payers chased.',
+    detail: 'TO BE DEFINED. Buyers pay by wire, card, or whatever\'s agreed. Late payers get reminders. If someone doesn\'t pay at all, we relist or follow up.',
+    subBlocks: [
+      { name: 'Take payment', desc: 'Funds received and reconciled.' },
+      { name: 'Reminders', desc: 'Auto-chase on unpaid invoices.' },
+      { name: 'Defaults', desc: 'What to do when nobody pays.' }
+    ],
+    nextId: 'release' },
+  { id: 'release', title: 'Hand It Over', phase: 'post', phaseOrder: 2, category: 'placeholder', placeholder: true,
+    tagline: 'Once paid, the lot goes to the buyer.',
+    detail: 'TO BE DEFINED. Payment confirmed → lot goes to the buyer. Either they pick it up in person, or we trigger shipping. Signed handover record.',
+    subBlocks: [
+      { name: 'Pickup window', desc: 'Buyer comes in person.' },
+      { name: 'Trigger shipping', desc: 'For lots that ship.' },
+      { name: 'Handover record', desc: 'Signed and filed.' }
+    ],
+    nextId: 'shipping' },
+  { id: 'shipping', title: 'Ship It', phase: 'post', phaseOrder: 3, category: 'placeholder', placeholder: true,
+    tagline: 'Crate it, ship it, insure it.',
+    detail: 'TO BE DEFINED. Pack appropriately, book the carrier, insure it, customs paperwork for international, share tracking with the buyer.',
+    subBlocks: [
+      { name: 'Crate it', desc: 'Right packing for the item.' },
+      { name: 'Book the carrier', desc: 'Pickup scheduled.' },
+      { name: 'Insure & customs', desc: 'Coverage and paperwork.' }
+    ],
+    nextId: 'payout' },
+  { id: 'payout', title: 'Pay the Consignor', phase: 'post', phaseOrder: 4, category: 'placeholder', placeholder: true,
+    tagline: 'Pay the consignor what they\'re owed.',
+    detail: 'TO BE DEFINED. Once buyer\'s payment clears, the consignor gets the hammer minus our commission minus any costs. They get a statement showing the math.',
+    subBlocks: [
+      { name: 'Math', desc: 'Hammer − commission − costs.' },
+      { name: 'Statement', desc: 'Itemized for the consignor.' },
+      { name: 'Send funds', desc: 'Wired or paid as agreed.' }
+    ],
+    nextId: 'reporting' },
+  { id: 'reporting', title: 'Wrap Up', phase: 'post', phaseOrder: 5, category: 'placeholder', placeholder: true,
+    tagline: 'Wrap up the sale. File everything away.',
+    detail: 'TO BE DEFINED. How did the sale go? Sell-through rate, total hammer, top performers. Lessons captured. Sale and assets moved to the archive.',
+    subBlocks: [
+      { name: 'Sale summary', desc: 'How it went.' },
+      { name: 'Lessons', desc: 'What worked, what didn\'t.' },
+      { name: 'Archive', desc: 'Files moved, sale closed.' }
+    ],
+    nextId: null }
+];
+
+const BLOCK_BY_ID = {};
+BLOCKS.forEach(b => { BLOCK_BY_ID[b.id] = b; });
+
+/* =================== LAYOUT — THREE BIG SPHERES, MAP INSIDE EACH =================== */
+
+const PHASE_CENTERS = {
+  pre: new THREE.Vector3(-1900, 0, 0),
+  during: new THREE.Vector3(0, 0, 0),
+  post: new THREE.Vector3(1900, 0, 0)
+};
+const PHASE_BRANCH_COUNTS = { pre: 10, during: 6, post: 6 };
+const SPHERE_RADIUS = 700;
+
+// Place each task inside its sphere as a flowchart-like map.
+// Vertical y mapping is the dominant "order" axis (top = first, bottom = last).
+// Add zigzag X and Z for organic 3D map feel.
+function localTaskPosition(phaseOrder, total) {
+  const yMax = 470;
+  const yStep = total > 1 ? (2 * yMax) / (total - 1) : 0;
+  const y = yMax - phaseOrder * yStep;
+
+  // x and z zigzag in a 4-step cycle: front, right, back, left
+  const cyc = phaseOrder % 4;
+  const offset = 110;
+  let x = 0, z = 0;
+  if (cyc === 0)      { x = 0;       z = offset; }
+  else if (cyc === 1) { x = offset;  z = 0; }
+  else if (cyc === 2) { x = 0;       z = -offset; }
+  else                { x = -offset; z = 0; }
+
+  return new THREE.Vector3(x, y, z);
+}
+
+function blockWorldPosition(block) {
+  const center = PHASE_CENTERS[block.phase];
+  if (block.isHub) return center.clone();
+  const total = PHASE_BRANCH_COUNTS[block.phase];
+  return center.clone().add(localTaskPosition(block.phaseOrder, total));
+}
+
+const POSITIONS = {};
+BLOCKS.forEach(b => { POSITIONS[b.id] = blockWorldPosition(b); });
+
+/* =================== THREE.JS SCENE =================== */
+
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0A0907, 2200, 7500);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+const initialCamPos = new THREE.Vector3(0, 700, 4400);
+const initialTarget = new THREE.Vector3(0, 0, 0);
+camera.position.copy(initialCamPos);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0);
+container.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.left = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+container.appendChild(labelRenderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(initialTarget);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 100;
+controls.maxDistance = 7000;
+controls.maxPolarAngle = Math.PI;
+controls.autoRotate = false;
+controls.autoRotateSpeed = 0.4;
+controls.update();
+
+scene.add(new THREE.AmbientLight(0xFFFFFF, 1));
+
+/* =================== BIG PHASE SPHERES =================== */
+
+const phaseSpheres = {};
+
+function makePhaseSphere(phaseId) {
+  const center = PHASE_CENTERS[phaseId];
+  const color = PHASE_COLOR_HEX[phaseId];
+
+  // Outer wireframe — this is what rotates for "twist and turn" feel
+  const wireGeom = new THREE.SphereGeometry(SPHERE_RADIUS, 28, 18);
+  const wireEdges = new THREE.WireframeGeometry(wireGeom);
+  const wireMat = new THREE.LineBasicMaterial({
+    color, transparent: true, opacity: 0.18
+  });
+  const wire = new THREE.LineSegments(wireEdges, wireMat);
+  wire.position.copy(center);
+  scene.add(wire);
+
+  // Inner glow ball
+  const innerGeom = new THREE.SphereGeometry(SPHERE_RADIUS * 0.5, 24, 16);
+  const innerMat = new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity: 0.025, depthWrite: false
+  });
+  const inner = new THREE.Mesh(innerGeom, innerMat);
+  inner.position.copy(center);
+  scene.add(inner);
+
+  // Big atmospheric halo
+  const haloGeom = new THREE.SphereGeometry(SPHERE_RADIUS * 1.15, 16, 12);
+  const haloMat = new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity: 0.02, depthWrite: false
+  });
+  const halo = new THREE.Mesh(haloGeom, haloMat);
+  halo.position.copy(center);
+  scene.add(halo);
+
+  // Phase label floating above the sphere
+  const tagDiv = document.createElement('div');
+  tagDiv.className = 'label-phase-tag';
+  const phaseName = phaseId === 'pre' ? 'Pre Auction' : phaseId === 'during' ? 'During Auction' : 'Post Auction';
+  tagDiv.innerHTML = phaseName + '<div class="progress" id="sphere-progress-' + phaseId + '">0 of ' + PHASE_BRANCH_COUNTS[phaseId] + ' built</div>';
+  const tagLabel = new CSS2DObject(tagDiv);
+  tagLabel.position.copy(center).add(new THREE.Vector3(0, SPHERE_RADIUS + 40, 0));
+  scene.add(tagLabel);
+
+  phaseSpheres[phaseId] = { wire, inner, halo, center };
+}
+
+makePhaseSphere('pre');
+makePhaseSphere('during');
+makePhaseSphere('post');
+
+/* =================== FUNNELS BETWEEN SPHERES =================== */
+
+const funnels = [];
+
+function makeFunnel(fromPhase, toPhase) {
+  const fromCenter = PHASE_CENTERS[fromPhase];
+  const toCenter = PHASE_CENTERS[toPhase];
+  const startX = fromCenter.x + SPHERE_RADIUS;
+  const endX = toCenter.x - SPHERE_RADIUS;
+  const length = endX - startX;
+  const midX = (startX + endX) / 2;
+
+  // Build a lathe geometry for the funnel — wide at ends, pinched in the middle
+  const points = [];
+  const segments = 24;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    // Radius profile: 130 at ends, 50 in middle
+    const r = 50 + 80 * Math.pow(2 * Math.abs(t - 0.5), 1.5);
+    const px = (t - 0.5) * length;
+    points.push(new THREE.Vector2(r, px));
+  }
+  const latheGeom = new THREE.LatheGeometry(points, 24);
+  // LatheGeometry rotates around y-axis by default; we want the funnel on x-axis
+  latheGeom.rotateZ(-Math.PI / 2);
+
+  const funnelMat = new THREE.MeshBasicMaterial({
+    color: 0xC4915C, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false
+  });
+  const funnel = new THREE.Mesh(latheGeom, funnelMat);
+  funnel.position.set(midX, 0, 0);
+  scene.add(funnel);
+
+  // Wireframe overlay so it's clearly a vessel
+  const wireOverlay = new THREE.LineSegments(
+    new THREE.WireframeGeometry(latheGeom),
+    new THREE.LineBasicMaterial({ color: 0xC4915C, transparent: true, opacity: 0.2 })
+  );
+  wireOverlay.position.copy(funnel.position);
+  scene.add(wireOverlay);
+
+  funnels.push({ mesh: funnel, wire: wireOverlay, fromPhase, toPhase, baseOpacity: 0.05, baseWireOpacity: 0.2 });
+}
+
+makeFunnel('pre', 'during');
+makeFunnel('during', 'post');
+
+/* =================== TASK BLOCKS INSIDE SPHERES =================== */
+
+const blockMeshes = [];
+const subMeshGroups = {};
+const sequenceLines = []; // connectors between consecutive tasks
+
+function makeTaskBlock(blockData) {
+  const cat = CATS[blockData.category];
+  const isPlaceholder = !!blockData.placeholder;
+  const group = new THREE.Group();
+  group.position.copy(POSITIONS[blockData.id]);
+  group.userData = { blockId: blockData.id, isMainBlock: true, blockData };
+
+  const w = 150, h = 60, d = 10;
+  const fillGeom = new THREE.BoxGeometry(w, h, d);
+  const fill = new THREE.Mesh(fillGeom, new THREE.MeshBasicMaterial({
+    color: cat.color, transparent: true, opacity: isPlaceholder ? 0.06 : 0.14, depthWrite: false
+  }));
+  group.add(fill);
+
+  const edges = new THREE.EdgesGeometry(fillGeom);
+  const outline = new THREE.LineSegments(edges,
+    new THREE.LineBasicMaterial({ color: cat.color, transparent: true, opacity: isPlaceholder ? 0.4 : 0.85 })
+  );
+  group.add(outline);
+
+  const glowGeom = new THREE.BoxGeometry(w + 24, h + 24, d + 6);
+  const glow = new THREE.Mesh(glowGeom, new THREE.MeshBasicMaterial({
+    color: cat.color, transparent: true, opacity: 0.05, depthWrite: false
+  }));
+  group.add(glow);
+
+  if (blockData.albusGate) {
+    const ringGeom = new THREE.BoxGeometry(w + 10, h + 10, d + 2);
+    const ringEdges = new THREE.EdgesGeometry(ringGeom);
+    group.add(new THREE.LineSegments(ringEdges,
+      new THREE.LineBasicMaterial({ color: 0xE0AA70, transparent: true, opacity: 0.7 })
+    ));
+  }
+
+  const hitGeom = new THREE.BoxGeometry(w + 30, h + 30, d + 30);
+  const hit = new THREE.Mesh(hitGeom, new THREE.MeshBasicMaterial({ visible: false }));
+  hit.userData = { blockId: blockData.id, isMainBlock: true };
+  group.add(hit);
+
+  const labelDiv = document.createElement('div');
+  let cls = 'label-3d';
+  if (blockData.albusGate) cls += ' is-albus';
+  if (isPlaceholder) cls += ' placeholder';
+  labelDiv.className = cls;
+  const orderNum = String(blockData.phaseOrder + 1).padStart(2, '0');
+  labelDiv.innerHTML =
+    '<div class="order-tag">' + orderNum + '</div>' +
+    '<div class="name"><span class="status-pip" data-block="' + blockData.id + '"></span>' + blockData.title + '</div>';
+  const label = new CSS2DObject(labelDiv);
+  label.position.set(0, 0, 0);
+  group.add(label);
+
+  scene.add(group);
+  blockMeshes.push({ group, fill, outline, glow, hit, blockData });
+
+  if (blockData.subBlocks && blockData.subBlocks.length > 0) {
+    const subContainer = new THREE.Group();
+    subContainer.visible = false;
+    const subItems = [];
+    blockData.subBlocks.forEach((sub, i) => {
+      const subGroup = new THREE.Group();
+      const angle = (i / blockData.subBlocks.length) * Math.PI * 2;
+      const subRadius = 110;
+      const sx = Math.cos(angle) * subRadius;
+      const sy = Math.sin(angle) * 40 - 50;
+      const sz = -Math.sin(angle) * 25;
+      subGroup.position.set(sx, sy, sz);
+
+      const sw = 12;
+      const sFillGeom = new THREE.BoxGeometry(sw, sw, sw);
+      const sFill = new THREE.Mesh(sFillGeom, new THREE.MeshBasicMaterial({
+        color: cat.color, transparent: true, opacity: 0.5
+      }));
+      subGroup.add(sFill);
+      const sEdges = new THREE.EdgesGeometry(sFillGeom);
+      subGroup.add(new THREE.LineSegments(sEdges,
+        new THREE.LineBasicMaterial({ color: cat.color, transparent: true, opacity: 0.9 })
+      ));
+      const linePoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(sx, sy, sz)];
+      const lineGeom = new THREE.BufferGeometry().setFromPoints(linePoints);
+      subContainer.add(new THREE.Line(lineGeom,
+        new THREE.LineBasicMaterial({ color: cat.color, transparent: true, opacity: 0.3 })
+      ));
+      const subLabelDiv = document.createElement('div');
+      subLabelDiv.className = 'label-3d sub';
+      subLabelDiv.innerHTML = '<div class="name">' + sub.name + '</div>';
+      const subLabel = new CSS2DObject(subLabelDiv);
+      subLabel.position.set(0, 12, 0);
+      subGroup.add(subLabel);
+      subContainer.add(subGroup);
+      subItems.push({ group: subGroup, fill: sFill });
+    });
+    group.add(subContainer);
+    subMeshGroups[blockData.id] = { container: subContainer, items: subItems };
+  }
+}
+
+BLOCKS.filter(b => !b.isHub).forEach(b => makeTaskBlock(b));
+
+/* =================== SEQUENTIAL CONNECTIONS INSIDE SPHERES =================== */
+
+['pre', 'during', 'post'].forEach(phase => {
+  const branches = BLOCKS.filter(b => b.phase === phase && !b.isHub).sort((a, b) => a.phaseOrder - b.phaseOrder);
+  for (let i = 0; i < branches.length - 1; i++) {
+    const from = branches[i];
+    const to = branches[i + 1];
+    const fromPos = POSITIONS[from.id];
+    const toPos = POSITIONS[to.id];
+    // Curved connector — bow toward sphere center for organic flow
+    const sphereCenter = PHASE_CENTERS[phase];
+    const mid = fromPos.clone().lerp(toPos, 0.5);
+    const towardCenter = sphereCenter.clone().sub(mid).normalize().multiplyScalar(60);
+    mid.add(towardCenter);
+
+    const curve = new THREE.CatmullRomCurve3([fromPos, mid, toPos]);
+    const points = curve.getPoints(24);
+    const geom = new THREE.BufferGeometry().setFromPoints(points);
+
+    const isAlbus = !!to.albusGate;
+    const isPlaceholder = !!to.placeholder;
+    let color, baseOpacity;
+    if (isAlbus) { color = 0xE0AA70; baseOpacity = 0.55; }
+    else if (isPlaceholder) { color = 0x5A5048; baseOpacity = 0.3; }
+    else { color = CATS[to.category].color; baseOpacity = 0.45; }
+
+    const line = new THREE.Line(geom, new THREE.LineBasicMaterial({
+      color, transparent: true, opacity: baseOpacity
+    }));
+    scene.add(line);
+    sequenceLines.push({ line, branchId: to.id, baseOpacity, isAlbus });
+  }
+});
+
+/* =================== PARTICLE PATH =================== */
+
+function getPhaseBranches(phase) {
+  return BLOCKS.filter(b => b.phase === phase && !b.isHub).sort((a, b) => a.phaseOrder - b.phaseOrder);
+}
+const PRE_BRANCHES = getPhaseBranches('pre');
+const DURING_BRANCHES = getPhaseBranches('during');
+const POST_BRANCHES = getPhaseBranches('post');
+
+const journeySegments = [];
+
+function curveInPhase(fromBlock, toBlock) {
+  const fromPos = POSITIONS[fromBlock.id];
+  const toPos = POSITIONS[toBlock.id];
+  const sphereCenter = PHASE_CENTERS[fromBlock.phase];
+  const mid = fromPos.clone().lerp(toPos, 0.5);
+  const towardCenter = sphereCenter.clone().sub(mid).normalize().multiplyScalar(60);
+  mid.add(towardCenter);
+  return new THREE.CatmullRomCurve3([fromPos, mid, toPos]);
+}
+
+function curveAcrossFunnel(fromBlock, toBlock) {
+  const fromPos = POSITIONS[fromBlock.id];
+  const toPos = POSITIONS[toBlock.id];
+  const fromCenter = PHASE_CENTERS[fromBlock.phase];
+  const toCenter = PHASE_CENTERS[toBlock.phase];
+  const fromExit = new THREE.Vector3(fromCenter.x + SPHERE_RADIUS, 0, 0);
+  const toEntry = new THREE.Vector3(toCenter.x - SPHERE_RADIUS, 0, 0);
+  const midX = (fromExit.x + toEntry.x) / 2;
+  const midPoint = new THREE.Vector3(midX, 0, 0);
+  return new THREE.CatmullRomCurve3([fromPos, fromExit, midPoint, toEntry, toPos]);
+}
+
+function buildJourney() {
+  const all = [...PRE_BRANCHES, ...DURING_BRANCHES, ...POST_BRANCHES];
+  for (let i = 0; i < all.length - 1; i++) {
+    const from = all[i], to = all[i + 1];
+    const curve = (from.phase === to.phase) ? curveInPhase(from, to) : curveAcrossFunnel(from, to);
+    journeySegments.push({ curve, fromId: from.id, toId: to.id });
+  }
+  // loop back from last to first via funnels (optional - skip and just teleport)
+}
+buildJourney();
+
+const PHASE_PARTICLE_COLORS = { pre: 0xE0AA70, during: 0xE07A88, post: 0x9CB897 };
+const SEGMENT_TIME = 1.4;
+const blockFlash = {};
+
+class Particle {
+  constructor(initialIndex) {
+    this.segmentIndex = initialIndex % journeySegments.length;
+    this.t = 0;
+    const geom = new THREE.SphereGeometry(7, 16, 16);
+    this.mesh = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({
+      color: 0xE0AA70, transparent: true, opacity: 0.95
+    }));
+    scene.add(this.mesh);
+    this.halo = new THREE.Mesh(new THREE.SphereGeometry(15, 16, 16), new THREE.MeshBasicMaterial({
+      color: 0xE0AA70, transparent: true, opacity: 0.2, depthWrite: false
+    }));
+    scene.add(this.halo);
+    this.farHalo = new THREE.Mesh(new THREE.SphereGeometry(28, 12, 12), new THREE.MeshBasicMaterial({
+      color: 0xE0AA70, transparent: true, opacity: 0.07, depthWrite: false
+    }));
+    scene.add(this.farHalo);
+  }
+  update(dt) {
+    this.t += dt / SEGMENT_TIME;
+    if (this.t >= 1) {
+      this.t = 0;
+      this.segmentIndex = (this.segmentIndex + 1) % journeySegments.length;
+      const seg = journeySegments[this.segmentIndex];
+      blockFlash[seg.fromId] = 1.0;
+    }
+    const seg = journeySegments[this.segmentIndex];
+    if (!seg) return;
+    const pos = seg.curve.getPointAt(Math.min(this.t, 1));
+    this.mesh.position.copy(pos);
+    this.halo.position.copy(pos);
+    this.farHalo.position.copy(pos);
+    const phase = BLOCK_BY_ID[seg.fromId].phase;
+    const color = PHASE_PARTICLE_COLORS[phase] || 0xE0AA70;
+    this.mesh.material.color.setHex(color);
+    this.halo.material.color.setHex(color);
+    this.farHalo.material.color.setHex(color);
+  }
+}
+
+const particles = [];
+const PARTICLE_COUNT = 5;
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  particles.push(new Particle(Math.floor((i / PARTICLE_COUNT) * journeySegments.length)));
+}
+
+/* =================== INTERACTION =================== */
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let hoveredId = null;
+let selectedId = null;
+
+function onPointerMove(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function checkHover() {
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(blockMeshes.map(b => b.hit), false);
+  if (hits.length > 0) {
+    const id = hits[0].object.userData.blockId;
+    if (hoveredId !== id) { hoveredId = id; renderer.domElement.style.cursor = 'pointer'; }
+  } else if (hoveredId) {
+    hoveredId = null;
+    renderer.domElement.style.cursor = 'grab';
+  }
+}
+
+renderer.domElement.addEventListener('pointermove', onPointerMove);
+
+let pointerDownPos = null;
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  pointerDownPos = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!pointerDownPos) return;
+  const dx = Math.abs(e.clientX - pointerDownPos.x);
+  const dy = Math.abs(e.clientY - pointerDownPos.y);
+  pointerDownPos = null;
+  if (dx > 5 || dy > 5) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(blockMeshes.map(b => b.hit), false);
+  if (hits.length > 0) selectBlock(hits[0].object.userData.blockId);
+});
+
+/* =================== CAMERA FLY =================== */
+
+let flyTarget = null, flyFromPos = null, flyFromTarget = null, flyT = 0;
+function flyTo(targetPos, distance) {
+  if (distance === undefined) distance = 380;
+  const camDir = camera.position.clone().sub(controls.target).normalize();
+  const newCamPos = targetPos.clone().add(camDir.multiplyScalar(distance));
+  flyFromPos = camera.position.clone();
+  flyFromTarget = controls.target.clone();
+  flyTarget = { camPos: newCamPos, target: targetPos.clone() };
+  flyT = 0;
+}
+function flyToFrame(frame) {
+  flyFromPos = camera.position.clone();
+  flyFromTarget = controls.target.clone();
+  flyTarget = { camPos: frame.camPos.clone(), target: frame.target.clone() };
+  flyT = 0;
+}
+function updateFly(dt) {
+  if (!flyTarget) return;
+  flyT += dt * 2.4;
+  const t = Math.min(1, flyT);
+  const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  camera.position.lerpVectors(flyFromPos, flyTarget.camPos, eased);
+  controls.target.lerpVectors(flyFromTarget, flyTarget.target, eased);
+  controls.update();
+  if (t >= 1) flyTarget = null;
+}
+
+function showSubBlocksFor(id) {
+  Object.entries(subMeshGroups).forEach(([blockId, group]) => {
+    group.container.visible = (blockId === id);
+  });
+}
+function hideAllSubBlocks() {
+  Object.values(subMeshGroups).forEach(g => { g.container.visible = false; });
+}
+
+/* =================== GLOBAL NAVIGATION SEQUENCE =================== */
+
+// Build a single flat sequence covering all hubs and tasks in journey order.
+// Arrow keys / prev-next buttons step through this list.
+const NAV_SEQUENCE = [];
+NAV_SEQUENCE.push('hub-pre');
+PRE_BRANCHES.forEach(b => NAV_SEQUENCE.push(b.id));
+NAV_SEQUENCE.push('hub-during');
+DURING_BRANCHES.forEach(b => NAV_SEQUENCE.push(b.id));
+NAV_SEQUENCE.push('hub-post');
+POST_BRANCHES.forEach(b => NAV_SEQUENCE.push(b.id));
+
+function getNavIndex(id) {
+  return NAV_SEQUENCE.indexOf(id);
+}
+
+function navStep(direction) {
+  // direction: +1 (next) or -1 (prev)
+  let idx;
+  if (selectedId === null) {
+    idx = direction > 0 ? 0 : NAV_SEQUENCE.length - 1;
+  } else {
+    idx = getNavIndex(selectedId);
+    if (idx === -1) idx = 0;
+    idx = (idx + direction + NAV_SEQUENCE.length) % NAV_SEQUENCE.length;
+  }
+  selectBlock(NAV_SEQUENCE[idx]);
+}
+
+/* =================== PANEL =================== */
+
+const panel = document.getElementById('panel');
+const panelClose = document.getElementById('panel-close');
+const panelTitle = document.getElementById('panel-title');
+const panelTagline = document.getElementById('panel-tagline');
+const panelLayer = document.getElementById('panel-layer');
+const panelDetail = document.getElementById('panel-detail');
+const panelPip = document.getElementById('panel-pip');
+const panelBadges = document.getElementById('panel-badges');
+const panelBranchesSection = document.getElementById('panel-branches-section');
+const panelBranchesList = document.getElementById('panel-branches-list');
+const panelSubSection = document.getElementById('panel-sub-section');
+const panelSubList = document.getElementById('panel-sub-list');
+const panelConnectsSection = document.getElementById('panel-connects-section');
+const panelConnectsList = document.getElementById('panel-connects-list');
+const panelNotes = document.getElementById('panel-notes');
+const panelNotesMeta = document.getElementById('panel-notes-meta');
+const panelNavStrip = document.getElementById('panel-nav-strip');
+const panelNavPosition = document.getElementById('panel-nav-position');
+const panelPrevBtn = document.getElementById('panel-prev');
+const panelNextBtn = document.getElementById('panel-next');
+const floatingNav = document.getElementById('floating-nav');
+const floatNavPosition = document.getElementById('float-nav-position');
+const floatPrevBtn = document.getElementById('float-prev');
+const floatNextBtn = document.getElementById('float-next');
+
+panelClose.addEventListener('click', closePanel);
+
+function closePanel() {
+  panel.classList.remove('open');
+  selectedId = null;
+  hideAllSubBlocks();
+  floatingNav.classList.remove('visible');
+}
+
+function selectBlock(id) {
+  const b = BLOCK_BY_ID[id];
+  if (!b) return;
+  selectedId = id;
+  panel.classList.add('open');
+  panelTitle.textContent = b.title;
+  panelTitle.classList.toggle('hub', !!b.isHub);
+  panelTagline.textContent = b.tagline;
+  const phaseLabel = b.phase === 'pre' ? 'Pre Auction' : b.phase === 'during' ? 'During Auction' : 'Post Auction';
+  panelLayer.textContent = b.isHub ? phaseLabel + ' · the whole phase' : phaseLabel + ' · step ' + (b.phaseOrder + 1);
+  panelDetail.textContent = b.detail;
+  panelPip.style.background = 'var(' + CATS[b.category].css + ')';
+
+  panelBadges.innerHTML = '';
+  if (b.albusGate) {
+    const badge = document.createElement('span');
+    badge.className = 'badge-tag albus';
+    badge.textContent = 'Albus pings you here';
+    panelBadges.appendChild(badge);
+  }
+  if (b.placeholder) {
+    const badge = document.createElement('span');
+    badge.className = 'badge-tag placeholder';
+    badge.textContent = 'To be defined';
+    panelBadges.appendChild(badge);
+  }
+
+  if (b.isHub && b.branches && b.branches.length > 0) {
+    panelBranchesSection.style.display = 'block';
+    panelBranchesList.innerHTML = '';
+    b.branches.forEach((branchId, i) => {
+      const branch = BLOCK_BY_ID[branchId];
+      if (!branch) return;
+      const div = document.createElement('div');
+      div.className = 'branch-item';
+      div.innerHTML = '<span class="branch-num">' + String(i + 1).padStart(2, '0') + '</span>' +
+                      '<span class="branch-name">' + branch.title + '</span>' +
+                      '<span class="branch-arrow">→</span>';
+      div.addEventListener('click', () => {
+        flyTo(POSITIONS[branchId]);
+        selectBlock(branchId);
+      });
+      panelBranchesList.appendChild(div);
+    });
+  } else {
+    panelBranchesSection.style.display = 'none';
+  }
+
+  if (b.subBlocks && b.subBlocks.length > 0) {
+    panelSubSection.style.display = 'block';
+    panelSubList.innerHTML = '';
+    b.subBlocks.forEach(sub => {
+      const div = document.createElement('div');
+      div.className = 'sub-item';
+      div.innerHTML = '<div class="name">' + sub.name + '</div><div class="desc">' + sub.desc + '</div>';
+      panelSubList.appendChild(div);
+    });
+  } else {
+    panelSubSection.style.display = 'none';
+  }
+
+  if (b.nextId) {
+    const next = BLOCK_BY_ID[b.nextId];
+    panelConnectsSection.style.display = 'block';
+    panelConnectsList.innerHTML = '';
+    if (next) {
+      const div = document.createElement('div');
+      div.className = 'conn-item';
+      div.innerHTML = '<span class="arrow">→</span> ' + next.title;
+      div.addEventListener('click', () => { flyTo(POSITIONS[b.nextId]); selectBlock(b.nextId); });
+      panelConnectsList.appendChild(div);
+    }
+  } else if (!b.isHub) {
+    panelConnectsSection.style.display = 'block';
+    panelConnectsList.innerHTML = '<div class="conn-item" style="cursor:default">— end of the line</div>';
+  } else {
+    panelConnectsSection.style.display = 'none';
+  }
+
+  loadBlockState(id);
+  if (!b.isHub) showSubBlocksFor(id); else hideAllSubBlocks();
+
+  // Update navigation strip
+  const navIdx = getNavIndex(id);
+  if (navIdx !== -1) {
+    panelNavStrip.style.display = 'flex';
+    const posText = '<span class="current">' + String(navIdx + 1).padStart(2, '0') + '</span> of ' + NAV_SEQUENCE.length;
+    panelNavPosition.innerHTML = posText;
+    floatNavPosition.innerHTML = posText + ' · ' + b.title;
+    floatingNav.classList.add('visible');
+  }
+
+  flyTo(POSITIONS[id], b.isHub ? 1300 : 280);
+}
+
+/* =================== NAV WIRING =================== */
+
+panelPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); navStep(-1); });
+panelNextBtn.addEventListener('click', (e) => { e.stopPropagation(); navStep(+1); });
+floatPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); navStep(-1); });
+floatNextBtn.addEventListener('click', (e) => { e.stopPropagation(); navStep(+1); });
+
+document.addEventListener('keydown', (e) => {
+  // Don't intercept when user is typing in the notes
+  if (document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT')) return;
+
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    navStep(+1);
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    navStep(-1);
+  } else if (e.key === 'Escape') {
+    closePanel();
+  } else if (e.key === ' ') {
+    // Space toggles play/pause
+    e.preventDefault();
+    playState.playing = !playState.playing;
+    playPauseBtn.textContent = playState.playing ? '⏸' : '▶';
+    playPauseBtn.classList.toggle('playing', playState.playing);
+  }
+});
+
+/* =================== PERSISTENCE =================== */
+
+const STORAGE_KEY = 'wac-os-v08-state';
+
+function loadAllState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+function saveAllState(state) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch (e) {}
+}
+
+function loadBlockState(id) {
+  const state = loadAllState();
+  const blockState = state[id] || { status: 'planned', notes: '', updated: null };
+  document.querySelectorAll('.status-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.status === blockState.status);
+  });
+  panelNotes.value = blockState.notes;
+  panelNotesMeta.textContent = blockState.updated
+    ? 'Saved on this device · last edit ' + new Date(blockState.updated).toLocaleString()
+    : 'Saved on this device · last edit —';
+}
+
+function saveBlockState(id, partial) {
+  const state = loadAllState();
+  state[id] = { ...(state[id] || { status: 'planned', notes: '' }), ...partial, updated: Date.now() };
+  saveAllState(state);
+  refreshStatusPips();
+  refreshProgress();
+}
+
+document.querySelectorAll('.status-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!selectedId) return;
+    document.querySelectorAll('.status-btn').forEach(b => b.classList.toggle('active', b === btn));
+    saveBlockState(selectedId, { status: btn.dataset.status });
+    panelNotesMeta.textContent = 'Saved on this device · last edit ' + new Date().toLocaleString();
+  });
+});
+
+let notesDebounce = null;
+panelNotes.addEventListener('input', () => {
+  if (!selectedId) return;
+  if (notesDebounce) clearTimeout(notesDebounce);
+  notesDebounce = setTimeout(() => {
+    saveBlockState(selectedId, { notes: panelNotes.value });
+    panelNotesMeta.textContent = 'Saved on this device · last edit ' + new Date().toLocaleString();
+  }, 350);
+});
+
+function refreshStatusPips() {
+  const state = loadAllState();
+  document.querySelectorAll('.status-pip[data-block]').forEach(pip => {
+    const id = pip.dataset.block;
+    const s = (state[id] || {}).status || 'planned';
+    pip.classList.remove('in-progress', 'done');
+    if (s !== 'planned') pip.classList.add(s);
+  });
+}
+
+function getPhaseCompletion(phase) {
+  const state = loadAllState();
+  const blocks = BLOCKS.filter(b => b.phase === phase && !b.isHub);
+  if (blocks.length === 0) return 0;
+  const done = blocks.filter(b => (state[b.id] || {}).status === 'done').length;
+  return done / blocks.length;
+}
+
+function refreshProgress() {
+  const state = loadAllState();
+  ['pre', 'during', 'post'].forEach(phase => {
+    const blocks = BLOCKS.filter(b => b.phase === phase && !b.isHub);
+    const done = blocks.filter(b => (state[b.id] || {}).status === 'done').length;
+    const inprog = blocks.filter(b => (state[b.id] || {}).status === 'in-progress').length;
+    const total = blocks.length;
+    const pct = total ? ((done + inprog * 0.5) / total) * 100 : 0;
+    document.getElementById('meter-' + phase + '-fill').style.width = pct + '%';
+    document.getElementById('meter-' + phase + '-text').textContent = done + ' / ' + total;
+    const sphereProg = document.getElementById('sphere-progress-' + phase);
+    if (sphereProg) sphereProg.textContent = done + ' of ' + total + ' built';
+  });
+  updateCompletionVisuals();
+}
+
+function updateCompletionVisuals() {
+  const completions = {
+    pre: getPhaseCompletion('pre'),
+    during: getPhaseCompletion('during'),
+    post: getPhaseCompletion('post')
+  };
+  // Sphere wireframe brightens with completion
+  ['pre', 'during', 'post'].forEach(p => {
+    const sphere = phaseSpheres[p];
+    if (!sphere) return;
+    const baseOp = 0.18 + completions[p] * 0.5;
+    sphere.wire.material.opacity = baseOp;
+    sphere.inner.material.opacity = 0.025 + completions[p] * 0.05;
+    sphere.halo.material.opacity = 0.02 + completions[p] * 0.04;
+  });
+  // Funnel brightens with from-phase completion
+  funnels.forEach(f => {
+    const fromComp = completions[f.fromPhase];
+    f.mesh.material.opacity = 0.05 + fromComp * 0.18;
+    f.wire.material.opacity = 0.2 + fromComp * 0.5;
+  });
+}
+
+refreshStatusPips();
+refreshProgress();
+
+/* =================== SYNC TO APPS SCRIPT BRIDGE =================== */
+
+const SYNC_CONFIG_KEY = 'wac-os-sync-config';
+const syncStatusEl = document.getElementById('sync-status');
+const syncTextEl = document.getElementById('sync-text');
+const syncModal = document.getElementById('sync-modal');
+const syncUrlInput = document.getElementById('sync-url-input');
+const syncTokenInput = document.getElementById('sync-token-input');
+const syncMsg = document.getElementById('sync-msg');
+const syncSaveBtn = document.getElementById('sync-save');
+const syncTestBtn = document.getElementById('sync-test');
+const syncCloseBtn = document.getElementById('sync-close');
+const syncExportBtn = document.getElementById('sync-export');
+const syncDisconnectBtn = document.getElementById('sync-disconnect');
+
+function loadSyncConfig() {
+  try { return JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY) || 'null'); }
+  catch (e) { return null; }
+}
+function saveSyncConfig(cfg) {
+  if (cfg) localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(cfg));
+  else localStorage.removeItem(SYNC_CONFIG_KEY);
+  updateSyncStatus();
+}
+
+function setSyncStatus(state, text) {
+  syncStatusEl.classList.remove('connected', 'syncing', 'error');
+  if (state) syncStatusEl.classList.add(state);
+  syncTextEl.textContent = text;
+}
+
+function updateSyncStatus() {
+  const cfg = loadSyncConfig();
+  if (cfg && cfg.url && cfg.token) {
+    setSyncStatus('connected', 'Synced');
+    syncDisconnectBtn.style.display = '';
+  } else {
+    setSyncStatus('', 'Local only');
+    syncDisconnectBtn.style.display = 'none';
+  }
+}
+
+function showSyncMsg(text, kind) {
+  syncMsg.className = 'modal-msg ' + (kind || 'info');
+  syncMsg.textContent = text;
+}
+
+async function pushStateToBridge(showFeedback) {
+  const cfg = loadSyncConfig();
+  if (!cfg || !cfg.url || !cfg.token) return false;
+  setSyncStatus('syncing', 'Syncing…');
+  const state = loadAllState();
+  try {
+    const res = await fetch(cfg.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids preflight CORS on Apps Script
+      body: JSON.stringify({ token: cfg.token, state })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSyncStatus('connected', 'Synced · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      if (showFeedback) showSyncMsg('Wrote ' + data.count + ' rows to build_state.', 'success');
+      return true;
+    } else {
+      setSyncStatus('error', 'Sync failed');
+      if (showFeedback) showSyncMsg('Bridge says: ' + (data.error || 'unknown error'), 'error');
+      return false;
+    }
+  } catch (err) {
+    setSyncStatus('error', 'Sync failed');
+    if (showFeedback) showSyncMsg('Network error: ' + err.message, 'error');
+    return false;
+  }
+}
+
+let pushDebounce = null;
+function scheduleSync() {
+  const cfg = loadSyncConfig();
+  if (!cfg || !cfg.url || !cfg.token) return;
+  if (pushDebounce) clearTimeout(pushDebounce);
+  pushDebounce = setTimeout(() => pushStateToBridge(false), 800);
+}
+
+// Hook into saveBlockState by wrapping it
+const originalSaveBlockState = saveBlockState;
+saveBlockState = function(id, partial) {
+  originalSaveBlockState(id, partial);
+  scheduleSync();
+};
+
+// Open modal
+syncStatusEl.addEventListener('click', () => {
+  const cfg = loadSyncConfig() || {};
+  syncUrlInput.value = cfg.url || '';
+  syncTokenInput.value = cfg.token || '';
+  syncMsg.className = 'modal-msg';
+  syncMsg.textContent = '';
+  syncModal.classList.add('open');
+});
+
+syncCloseBtn.addEventListener('click', () => syncModal.classList.remove('open'));
+syncModal.addEventListener('click', (e) => { if (e.target === syncModal) syncModal.classList.remove('open'); });
+
+syncTestBtn.addEventListener('click', async () => {
+  const url = syncUrlInput.value.trim();
+  const token = syncTokenInput.value.trim();
+  if (!url || !token) { showSyncMsg('Need both URL and token to test.', 'error'); return; }
+  showSyncMsg('Testing…', 'info');
+  try {
+    const testUrl = url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
+    const res = await fetch(testUrl);
+    const data = await res.json();
+    if (data.ok) showSyncMsg('Bridge reached. Build state has ' + (data.count || 0) + ' rows.', 'success');
+    else if (data.error === 'unauthorized') showSyncMsg('Reached the bridge but the token was rejected. Double-check the secret.', 'error');
+    else showSyncMsg('Bridge replied: ' + JSON.stringify(data), 'error');
+  } catch (err) {
+    showSyncMsg('Could not reach the URL: ' + err.message, 'error');
+  }
+});
+
+syncSaveBtn.addEventListener('click', async () => {
+  const url = syncUrlInput.value.trim();
+  const token = syncTokenInput.value.trim();
+  if (!url || !token) { showSyncMsg('Need both URL and token.', 'error'); return; }
+  saveSyncConfig({ url, token });
+  showSyncMsg('Saved. Pushing current state…', 'info');
+  const ok = await pushStateToBridge(true);
+  if (!ok) {
+    showSyncMsg('Saved, but the first push failed. Check the URL and secret then click Save & sync again.', 'error');
+  }
+});
+
+syncDisconnectBtn.addEventListener('click', () => {
+  saveSyncConfig(null);
+  syncUrlInput.value = '';
+  syncTokenInput.value = '';
+  showSyncMsg('Disconnected. Map saves to this browser only now.', 'info');
+});
+
+syncExportBtn.addEventListener('click', () => {
+  const state = loadAllState();
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'wac-build-state-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showSyncMsg('Exported.', 'success');
+});
+
+updateSyncStatus();
+
+/* =================== FILTERS & NAVIGATION =================== */
+
+let activeFilter = 'all';
+
+function applyFilter(filter) {
+  activeFilter = filter;
+  ['all', 'pre', 'during', 'post'].forEach(f => {
+    const btn = document.getElementById('filter-' + f);
+    if (btn) btn.classList.toggle('active', f === filter);
+  });
+
+  blockMeshes.forEach(({ group, fill, outline, glow, blockData }) => {
+    const dim = filter !== 'all' && blockData.phase !== filter;
+    const isPlaceholder = !!blockData.placeholder;
+    const baseFill = isPlaceholder ? 0.06 : 0.14;
+    const baseOutline = isPlaceholder ? 0.4 : 0.85;
+    fill.material.opacity = dim ? baseFill * 0.25 : baseFill;
+    outline.material.opacity = dim ? baseOutline * 0.25 : baseOutline;
+    glow.material.opacity = dim ? 0.01 : 0.05;
+    group.children.forEach(child => {
+      if (child.element && child.element.classList.contains('label-3d')) {
+        child.element.classList.toggle('dimmed', dim);
+      }
+    });
+  });
+
+  sequenceLines.forEach(({ line, branchId, baseOpacity }) => {
+    const branch = BLOCK_BY_ID[branchId];
+    const dim = filter !== 'all' && branch.phase !== filter;
+    line.material.opacity = dim ? baseOpacity * 0.2 : baseOpacity;
+  });
+}
+
+const PHASE_FRAMES = {
+  pre:    { camPos: new THREE.Vector3(-1900, 200, 1900), target: PHASE_CENTERS.pre.clone() },
+  during: { camPos: new THREE.Vector3(0, 200, 1900),     target: PHASE_CENTERS.during.clone() },
+  post:   { camPos: new THREE.Vector3(1900, 200, 1900),  target: PHASE_CENTERS.post.clone() }
+};
+
+['pre', 'during', 'post'].forEach(p => {
+  const btn = document.getElementById('filter-' + p);
+  btn.addEventListener('click', () => {
+    applyFilter(p);
+    flyToFrame(PHASE_FRAMES[p]);
+  });
+});
+document.getElementById('filter-all').addEventListener('click', () => {
+  applyFilter('all');
+  flyToFrame({ camPos: initialCamPos.clone(), target: initialTarget.clone() });
+});
+document.getElementById('reset-view').addEventListener('click', () => {
+  applyFilter('all');
+  flyToFrame({ camPos: initialCamPos.clone(), target: initialTarget.clone() });
+  closePanel();
+});
+const autoRotateBtn = document.getElementById('auto-rotate');
+autoRotateBtn.addEventListener('click', () => {
+  controls.autoRotate = !controls.autoRotate;
+  autoRotateBtn.classList.toggle('active', controls.autoRotate);
+});
+
+/* =================== PLAYBACK =================== */
+
+let playState = { playing: true, speed: 1 };
+const playPauseBtn = document.getElementById('play-pause');
+playPauseBtn.addEventListener('click', () => {
+  playState.playing = !playState.playing;
+  playPauseBtn.textContent = playState.playing ? '⏸' : '▶';
+  playPauseBtn.classList.toggle('playing', playState.playing);
+});
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    playState.speed = parseFloat(btn.dataset.speed);
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b === btn));
+  });
+});
+
+/* =================== RESIZE =================== */
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* =================== ANIMATE =================== */
+
+const clock = new THREE.Clock();
+const animStartTime = performance.now();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t = (performance.now() - animStartTime) / 1000;
+
+  // Spheres rotate gently — different speeds for "twist and turn" life
+  if (phaseSpheres.pre)    phaseSpheres.pre.wire.rotation.y    = t * 0.05;
+  if (phaseSpheres.during) phaseSpheres.during.wire.rotation.y = -t * 0.06;
+  if (phaseSpheres.post)   phaseSpheres.post.wire.rotation.y   = t * 0.04;
+
+  // Sub-block bobbing
+  Object.values(subMeshGroups).forEach(({ container, items }) => {
+    if (!container.visible) return;
+    items.forEach((s, i) => {
+      s.group.rotation.y = t * 0.3 + i;
+      s.group.position.y += Math.sin(t * 0.7 + i) * 0.03;
+    });
+  });
+
+  // Particles
+  if (playState.playing) {
+    const effDt = dt * playState.speed;
+    particles.forEach(p => p.update(effDt));
+  }
+
+  // Decay flashes
+  Object.keys(blockFlash).forEach(id => {
+    blockFlash[id] = Math.max(0, blockFlash[id] - dt * 1.6);
+  });
+
+  // Hover/select scaling and glow
+  blockMeshes.forEach(({ group, glow, blockData }) => {
+    const target = (blockData.id === hoveredId || blockData.id === selectedId) ? 1.1 : 1;
+    group.scale.lerp(new THREE.Vector3(target, target, target), 0.15);
+    let targetGlow = (blockData.id === selectedId) ? 0.22 : (blockData.id === hoveredId ? 0.14 : 0.05);
+    const flash = blockFlash[blockData.id] || 0;
+    targetGlow += flash * 0.4;
+    glow.material.opacity += (targetGlow - glow.material.opacity) * 0.18;
+  });
+
+  // Brighten selected branch's connector
+  sequenceLines.forEach(({ line, branchId, baseOpacity }) => {
+    const isSelected = branchId === selectedId;
+    const targetOp = isSelected ? Math.min(1, baseOpacity * 2.2) : baseOpacity;
+    if (activeFilter === 'all' || BLOCK_BY_ID[branchId].phase === activeFilter) {
+      line.material.opacity += (targetOp - line.material.opacity) * 0.12;
+    }
+  });
+
+  checkHover();
+  updateFly(dt);
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+
+animate();
+
+/* =================== STARTUP =================== */
+
+setTimeout(() => { document.getElementById('loader').classList.add('hidden'); }, 600);
+setTimeout(() => { document.getElementById('hint').classList.add('fade'); }, 8000);
+
+// Intro fly: start far overhead and front, settle to front view
+const introFromPos = new THREE.Vector3(0, 4500, 1500);
+const introTarget = new THREE.Vector3(0, 0, 0);
+camera.position.copy(introFromPos);
+controls.target.copy(introTarget);
+flyFromPos = camera.position.clone();
+flyFromTarget = controls.target.clone();
+flyTarget = { camPos: initialCamPos.clone(), target: initialTarget.clone() };
+flyT = 0;
+
+</script>
+
+</body>
+</html>
